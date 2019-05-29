@@ -13,21 +13,29 @@ namespace yer.AzLog
     public static class Log
     {
         [FunctionName("Log")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
+        public static async Task<IActionResult> AcceptLogRequest(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "Log")] HttpRequest req,
             ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            log.LogInformation("HTTP trigger fired for log entry.");
 
-            string name = req.Query["name"];
+            // Read from the NLOG format, like.
+            // <parameter name='timestamp' type='System.String' layout='${longdate}'/>
+            // <parameter name='loggerName' type='System.String' layout='${logger}'/>
+            // <parameter name='loggerLevel' type='System.String' layout='${level}'/>
+            // <parameter name='message' type='System.String' layout='${message}'/>
+            string timestamp = req.Form["timestamp"]; 
+            string loggerName = req.Form["loggerName"]; 
+            string loggerLevel = req.Form["loggerLevel"]; 
+            string message = req.Form["message"]; 
+           
+            var res = $"{timestamp}   | {loggerName} | {loggerLevel.ToUpper()} | {message}";
+            log.LogInformation(res);
 
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
+            //TODO: Persist the data
 
-            return name != null
-                ? (ActionResult)new OkObjectResult($"Hello, {name}")
-                : new BadRequestObjectResult("Please pass a name on the query string or in the request body");
+            return (ActionResult)new OkObjectResult(res);
+
         }
     }
 }
